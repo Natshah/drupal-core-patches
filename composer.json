@@ -9,22 +9,18 @@
         "composer patches",
         "varbase"
     ],
-    "homepage":
-    "https://github.com/Vardot/drupal-core-patches",
+    "homepage": "https://github.com/Vardot/drupal-core-patches",
     "license": "GPL-2.0-or-later",
     "authors": [
         {
             "name": "Vardot",
-            "homepage":
-            "https://www.drupal.org/vardot",
+            "homepage": "https://www.drupal.org/vardot",
             "role": "Maintainer"
         }
     ],
     "support": {
-        "issues":
-        "https://github.com/Vardot/drupal-core-patches/issues",
-        "source":
-        "https://github.com/Vardot/drupal-core-patches"
+        "issues": "https://github.com/Vardot/drupal-core-patches/issues",
+        "source": "https://github.com/Vardot/drupal-core-patches"
     },
     "require": {
         "cweagans/composer-patches": "~1 || ~2"
