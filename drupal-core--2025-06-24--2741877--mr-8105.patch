@@ -1,0 +1,406 @@
+diff --git a/core/lib/Drupal/Core/Ajax/CloseDialogCommand.php b/core/lib/Drupal/Core/Ajax/CloseDialogCommand.php
+index d1ffb9c470c7c4522e98be7df2b851bbb77204de..7288adddf2f03fd38fd730eafe99b2cb719573be 100644
+--- a/core/lib/Drupal/Core/Ajax/CloseDialogCommand.php
++++ b/core/lib/Drupal/Core/Ajax/CloseDialogCommand.php
+@@ -32,7 +32,7 @@ class CloseDialogCommand implements CommandInterface {
+    *   (optional) Whether to persist the dialog in the DOM or not.
+    */
+   public function __construct($selector = NULL, $persist = FALSE) {
+-    $this->selector = $selector ?: '#drupal-modal';
++    $this->selector = $selector ?? '#drupal-modal';
+     $this->persist = $persist;
+   }
+ 
+diff --git a/core/lib/Drupal/Core/Ajax/CloseModalDialogCommand.php b/core/lib/Drupal/Core/Ajax/CloseModalDialogCommand.php
+index a9c3fe702e2f403975b3c2282973287e45e15d50..910fb4d75ba20b126496f0734bc30991b4c0d21e 100644
+--- a/core/lib/Drupal/Core/Ajax/CloseModalDialogCommand.php
++++ b/core/lib/Drupal/Core/Ajax/CloseModalDialogCommand.php
+@@ -14,9 +14,12 @@ class CloseModalDialogCommand extends CloseDialogCommand {
+    *
+    * @param bool $persist
+    *   (optional) Whether to persist the dialog in the DOM or not.
++   * @param string $selector
++   *   (optional) Selector to scope the modal. Only modals of the same scope
++   *   will be removed after opening a subsequent modal.
+    */
+-  public function __construct($persist = FALSE) {
+-    $this->selector = '#drupal-modal';
++  public function __construct($persist = FALSE, string $selector = '#drupal-modal') {
++    $this->selector = $selector;
+     $this->persist = $persist;
+   }
+ 
+diff --git a/core/lib/Drupal/Core/Ajax/OpenModalDialogCommand.php b/core/lib/Drupal/Core/Ajax/OpenModalDialogCommand.php
+index 700aae4068a87a30a700774d6017abfa223b65fd..78e526a3ebdb33bc4059c65bc72a1c15753c8036 100644
+--- a/core/lib/Drupal/Core/Ajax/OpenModalDialogCommand.php
++++ b/core/lib/Drupal/Core/Ajax/OpenModalDialogCommand.php
+@@ -29,10 +29,13 @@ class OpenModalDialogCommand extends OpenDialogCommand {
+    *   (optional) Custom settings that will be passed to the Drupal behaviors
+    *   on the content of the dialog. If left empty, the settings will be
+    *   populated automatically from the current request.
++   * @param string $selector
++   *   (optional) Selector to scope the modal. Only modals of the same scope
++   *   will be removed after opening a subsequent modal.
+    */
+-  public function __construct(string|\Stringable|null $title, $content, array $dialog_options = [], $settings = NULL) {
++  public function __construct(string|\Stringable|null $title, $content, array $dialog_options = [], $settings = NULL, string $selector = '#drupal-modal') {
+     $dialog_options['modal'] = TRUE;
+-    parent::__construct('#drupal-modal', $title, $content, $dialog_options, $settings);
++    parent::__construct($selector, $title, $content, $dialog_options, $settings);
+   }
+ 
+ }
+diff --git a/core/lib/Drupal/Core/Render/MainContent/ModalRenderer.php b/core/lib/Drupal/Core/Render/MainContent/ModalRenderer.php
+index 6e1b7632a488a7244be2c9b371ab0b7d93dbce0c..25cdde0a86f12949a41e881f32803bec05a384b9 100644
+--- a/core/lib/Drupal/Core/Render/MainContent/ModalRenderer.php
++++ b/core/lib/Drupal/Core/Render/MainContent/ModalRenderer.php
+@@ -32,7 +32,8 @@ public function renderResponse(array $main_content, Request $request, RouteMatch
+     // Determine the dialog options for the OpenDialogCommand.
+     $options = $this->getDialogOptions($request);
+ 
+-    $response->addCommand(new OpenModalDialogCommand($title, $content, $options));
++    $modal_selector = $main_content['#modal_selector'] ?? '#drupal-modal';
++    $response->addCommand(new OpenModalDialogCommand($title, $content, $options, NULL, $modal_selector));
+     return $response;
+   }
+ 
+diff --git a/core/misc/dialog/dialog.js b/core/misc/dialog/dialog.js
+index 935e8ac59fff05f20e452f144a793a5c42d6629d..e3e058f20bec6deff818efd854c47c7dee24d898 100644
+--- a/core/misc/dialog/dialog.js
++++ b/core/misc/dialog/dialog.js
+@@ -103,7 +103,10 @@ class DrupalDialogEvent extends Event {
+     }
+ 
+     function closeDialog(value) {
+-      domElement.dispatchEvent(new DrupalDialogEvent('beforeclose', dialog));
++      const settings = $element.dialog('instance');
++      domElement.dispatchEvent(
++        new DrupalDialogEvent('beforeclose', dialog, settings),
++      );
+ 
+       // Unlocks the body when the dialog closes.
+       bodyScrollLock.clearBodyLocks();
+@@ -112,7 +115,9 @@ class DrupalDialogEvent extends Event {
+       dialog.returnValue = value;
+       dialog.open = false;
+ 
+-      domElement.dispatchEvent(new DrupalDialogEvent('afterclose', dialog));
++      domElement.dispatchEvent(
++        new DrupalDialogEvent('afterclose', dialog, settings),
++      );
+     }
+ 
+     dialog.show = () => {
+diff --git a/core/modules/ckeditor5/ckeditor5.ckeditor5.yml b/core/modules/ckeditor5/ckeditor5.ckeditor5.yml
+index 7624fbfd708369b5d0d8adea99cc048d756f54da..445477f866e95f571c32814dd98e35e3ff60e8c5 100644
+--- a/core/modules/ckeditor5/ckeditor5.ckeditor5.yml
++++ b/core/modules/ckeditor5/ckeditor5.ckeditor5.yml
+@@ -823,6 +823,7 @@ media_library_mediaLibrary:
+           classes:
+             ui-dialog: media-library-widget-modal
+           height: 75%
++          selector: '#modal-media-library'
+   drupal:
+     label: Media Library
+     elements: false
+diff --git a/core/modules/ckeditor5/js/ckeditor5.dialog.fix.js b/core/modules/ckeditor5/js/ckeditor5.dialog.fix.js
+index 41449dcf693fab7ff15220fd4b57bd89a71cab8d..f1444f6541c36a394331893213f8b0e8cdcc0d4e 100644
+--- a/core/modules/ckeditor5/js/ckeditor5.dialog.fix.js
++++ b/core/modules/ckeditor5/js/ckeditor5.dialog.fix.js
+@@ -18,7 +18,11 @@
+       if (event.target.classList === undefined) {
+         return this._super(event);
+       }
+-      return event.target.classList.contains('ck') || this._super(event);
++
++      return (
++        (event.target.classList && event.target.classList.contains('ck')) ||
++        this._super(event)
++      );
+     },
+   });
+ })(jQuery);
+diff --git a/core/modules/ckeditor5/js/ckeditor5.js b/core/modules/ckeditor5/js/ckeditor5.js
+index f5af26de83853c3a4448ef37308d11cf703d5ba1..5d5dc191ca21c5a4c340d8e9272e8aa4e53e717b 100644
+--- a/core/modules/ckeditor5/js/ckeditor5.js
++++ b/core/modules/ckeditor5/js/ckeditor5.js
+@@ -578,11 +578,11 @@
+    */
+   Drupal.ckeditor5 = {
+     /**
+-     * Variable storing the current dialog's save callback.
++     * Set storing the dialog save callbacks keyed by dialog selector.
+      *
+-     * @type {?function}
++     * @type {Map}
+      */
+-    saveCallback: null,
++    saveCallback: new Map(),
+ 
+     /**
+      * Open a dialog for a Drupal-based plugin.
+@@ -621,7 +621,21 @@
+       ckeditorAjaxDialog.execute();
+ 
+       // Store the save callback to be executed when this dialog is closed.
+-      Drupal.ckeditor5.saveCallback = saveCallback;
++      if (
++        Object.hasOwn(Drupal.ckeditor5, 'saveCallback') &&
++        Drupal.ckeditor5.saveCallback != null &&
++        Object.hasOwn(Drupal.ckeditor5.saveCallback, 'has') &&
++        Drupal.ckeditor5.saveCallback.has(set) &&
++        Object.hasOwn(dialogSettings, 'selector')
++      ) {
++        Drupal.ckeditor5.saveCallback.set(
++          dialogSettings.selector || '#drupal-modal',
++          saveCallback,
++        );
++      }
++      else {
++        Drupal.ckeditor5.saveCallback = saveCallback;
++      }
+     },
+   };
+ 
+@@ -665,16 +679,33 @@
+   });
+ 
+   // Respond to dialogs that are saved, sending data back to CKEditor.
+-  $(window).on('editor:dialogsave', (e, values) => {
++  $(window).on('editor:dialogsave', (e, values, selector) => {
+     if (Drupal.ckeditor5.saveCallback) {
+-      Drupal.ckeditor5.saveCallback(values);
++      if (
++        Object.hasOwn(Drupal.ckeditor5.saveCallback, 'has') &&
++        Drupal.ckeditor5.saveCallback.has(selector)
++      ) {
++        Drupal.ckeditor5.saveCallback.get(selector)(values);
++      } else {
++        Drupal.ckeditor5.saveCallback(values);
++      }
+     }
+   });
+ 
+   // Respond to dialogs that are closed, removing the current save handler.
+-  window.addEventListener('dialog:afterclose', () => {
++  $(window).on('dialog:afterclose', (e, dialog, element, dialogSettings) => {
++    dialogSettings = dialogSettings || {};
++    const options = dialogSettings.options || {};
++    const selector = options.selector || '#drupal-modal';
+     if (Drupal.ckeditor5.saveCallback) {
+-      Drupal.ckeditor5.saveCallback = null;
++      if (
++        Object.hasOwn(Drupal.ckeditor5.saveCallback, 'has') &&
++        Drupal.ckeditor5.saveCallback.has(selector)
++      ) {
++        Drupal.ckeditor5.saveCallback.delete(selector);
++      } else {
++        Drupal.ckeditor5.saveCallback = null;
++      }
+     }
+   });
+ })(Drupal, Drupal.debounce, CKEditor5, jQuery, once);
+diff --git a/core/modules/editor/js/editor.dialog.js b/core/modules/editor/js/editor.dialog.js
+index 5cd37960da55cf5e739234293f8ada9f9a4cf784..bc87d49fb664f440c8e2e7b235d643a23b5f6807 100644
+--- a/core/modules/editor/js/editor.dialog.js
++++ b/core/modules/editor/js/editor.dialog.js
+@@ -19,6 +19,8 @@
+    *   The server response from the ajax request.
+    * @param {Array} response.values
+    *   The values that were saved.
++   * @param {Array} response.selector
++   *   Selector for the dialog.
+    * @param {number} [status]
+    *   The status code from the ajax request.
+    *
+@@ -29,6 +31,9 @@
+     response,
+     status,
+   ) {
+-    $(window).trigger('editor:dialogsave', [response.values]);
++    $(window).trigger('editor:dialogsave', [
++      response.values,
++      response.selector,
++    ]);
+   };
+ })(jQuery, Drupal);
+diff --git a/core/modules/editor/src/Ajax/EditorDialogSave.php b/core/modules/editor/src/Ajax/EditorDialogSave.php
+index 113e72168d662cd26c902a3bca7e308a9579451d..e29bf80d8bc63df75749ab22019719ccb943b18e 100644
+--- a/core/modules/editor/src/Ajax/EditorDialogSave.php
++++ b/core/modules/editor/src/Ajax/EditorDialogSave.php
+@@ -24,8 +24,10 @@ class EditorDialogSave implements CommandInterface {
+    *
+    * @param array $values
+    *   The values that should be passed to the form constructor in Drupal.
++   * @param string $selector
++   *   Dialog selector.
+    */
+-  public function __construct(array $values) {
++  public function __construct(array $values, protected readonly string $selector = '#drupal-modal') {
+     $this->values = $values;
+   }
+ 
+@@ -36,6 +38,7 @@ public function render() {
+     return [
+       'command' => 'editorDialogSave',
+       'values' => $this->values,
++      'selector' => $this->selector,
+     ];
+   }
+ 
+diff --git a/core/modules/media_library/src/Form/AddFormBase.php b/core/modules/media_library/src/Form/AddFormBase.php
+index 869c3842134d3ad7d3b803e7c23e7a3303f9d70a..003e93612e9054286c50a9fa85295df80f737927 100644
+--- a/core/modules/media_library/src/Form/AddFormBase.php
++++ b/core/modules/media_library/src/Form/AddFormBase.php
+@@ -779,7 +779,7 @@ public function updateWidget(array &$form, FormStateInterface $form_state) {
+ 
+     return $this->openerResolver->get($state)
+       ->getSelectionResponse($state, $media_ids)
+-      ->addCommand(new CloseDialogCommand());
++      ->addCommand(new CloseDialogCommand('#modal-media-library', FALSE));
+   }
+ 
+   /**
+diff --git a/core/modules/media_library/src/MediaLibraryEditorOpener.php b/core/modules/media_library/src/MediaLibraryEditorOpener.php
+index ab5674c8753d20e77ce9e0a18c361d8ff43ea7fe..f8b1428d864335f517a5974c2add95db8b142c6c 100644
+--- a/core/modules/media_library/src/MediaLibraryEditorOpener.php
++++ b/core/modules/media_library/src/MediaLibraryEditorOpener.php
+@@ -70,7 +70,7 @@ public function getSelectionResponse(MediaLibraryState $state, array $selected_i
+         'data-entity-uuid' => $selected_media->uuid(),
+       ],
+     ];
+-    $response->addCommand(new EditorDialogSave($values));
++    $response->addCommand(new EditorDialogSave($values, '#modal-media-library'));
+ 
+     return $response;
+   }
+diff --git a/core/modules/media_library/src/MediaLibraryUiBuilder.php b/core/modules/media_library/src/MediaLibraryUiBuilder.php
+index 521f7806c0c8fc012c268aad530413457b6e5130..96911a5e9a4b3dceab6cc324da6142d9e996f980 100644
+--- a/core/modules/media_library/src/MediaLibraryUiBuilder.php
++++ b/core/modules/media_library/src/MediaLibraryUiBuilder.php
+@@ -120,6 +120,7 @@ public function buildUi(?MediaLibraryState $state = NULL) {
+     }
+     else {
+       return [
++        '#modal_selector' => '#modal-media-library',
+         '#theme' => 'media_library_wrapper',
+         '#attributes' => [
+           'id' => 'media-library-wrapper',
+diff --git a/core/modules/media_library/src/Plugin/Field/FieldWidget/MediaLibraryWidget.php b/core/modules/media_library/src/Plugin/Field/FieldWidget/MediaLibraryWidget.php
+index 3b36ee5e3773e237b43f6f686348f0b8d6294710..cd5ca66782e11fecc7400caccf2a1aa57ef709b2 100644
+--- a/core/modules/media_library/src/Plugin/Field/FieldWidget/MediaLibraryWidget.php
++++ b/core/modules/media_library/src/Plugin/Field/FieldWidget/MediaLibraryWidget.php
+@@ -820,7 +820,7 @@ public static function openMediaLibrary(array $form, FormStateInterface $form_st
+     $library_ui = \Drupal::service('media_library.ui_builder')->buildUi($triggering_element['#media_library_state']);
+     $dialog_options = MediaLibraryUiBuilder::dialogOptions();
+     return (new AjaxResponse())
+-      ->addCommand(new OpenModalDialogCommand($dialog_options['title'], $library_ui, $dialog_options));
++      ->addCommand(new OpenModalDialogCommand($dialog_options['title'], $library_ui, $dialog_options, NULL, '#modal-media-library'));
+   }
+ 
+   /**
+diff --git a/core/modules/media_library/src/Plugin/views/field/MediaLibrarySelectForm.php b/core/modules/media_library/src/Plugin/views/field/MediaLibrarySelectForm.php
+index 2e233cab5e468815d41a3327cd9fd7343ed28a0d..9d323bfdde38e339c87db1cae6e7263d6c025f5b 100644
+--- a/core/modules/media_library/src/Plugin/views/field/MediaLibrarySelectForm.php
++++ b/core/modules/media_library/src/Plugin/views/field/MediaLibrarySelectForm.php
+@@ -3,7 +3,7 @@
+ namespace Drupal\media_library\Plugin\views\field;
+ 
+ use Drupal\Core\Ajax\AjaxResponse;
+-use Drupal\Core\Ajax\CloseDialogCommand;
++use Drupal\Core\Ajax\CloseModalDialogCommand;
+ use Drupal\Core\Ajax\MessageCommand;
+ use Drupal\Core\Form\FormBuilderInterface;
+ use Drupal\Core\Form\FormStateInterface;
+@@ -176,7 +176,7 @@ public static function updateWidget(array &$form, FormStateInterface $form_state
+     return \Drupal::service('media_library.opener_resolver')
+       ->get($state)
+       ->getSelectionResponse($state, $selected_ids)
+-      ->addCommand(new CloseDialogCommand());
++      ->addCommand(new CloseModalDialogCommand(FALSE, '#modal-media-library'));
+   }
+ 
+   /**
+diff --git a/core/modules/media_library/tests/src/FunctionalJavascript/WidgetUploadTest.php b/core/modules/media_library/tests/src/FunctionalJavascript/WidgetUploadTest.php
+index 7e0b3af57f0b92ae694b02b893143d8cebab91ed..bdd8710b565be93599989d4eb2009f74218fe894 100644
+--- a/core/modules/media_library/tests/src/FunctionalJavascript/WidgetUploadTest.php
++++ b/core/modules/media_library/tests/src/FunctionalJavascript/WidgetUploadTest.php
+@@ -760,4 +760,78 @@ public function testWidgetUploadAdvancedUi(): void {
+     $assert_session->fieldValueEquals('Alternative text', $filenames[0], $media_item_one);
+   }
+ 
++  /**
++   * Tests if the widget is working correctly when opened from a modal.
++   */
++  public function testWidgetInModalContext() {
++    $page = $this->getSession()->getPage();
++
++    foreach ($this->getTestFiles('image') as $image) {
++      $extension = pathinfo($image->filename, PATHINFO_EXTENSION);
++      if ($extension === 'png') {
++        $png_image = $image;
++      }
++      elseif ($extension === 'jpg') {
++        $jpg_image = $image;
++      }
++    }
++
++    if (!isset($png_image) || !isset($jpg_image)) {
++      $this->fail('Expected test files not present.');
++    }
++
++    // Create a user that can create media for all media types.
++    $user = $this->drupalCreateUser([
++      'access administration pages',
++      'access content',
++      'create basic_page content',
++      'create media',
++      'view media',
++    ]);
++    $this->drupalLogin($user);
++    $this->drupalGet('/media-library-test-modal');
++    $assert_session = $this->assertSession();
++    $this->click('.modal-basic_page');
++    $assert_session->waitForElement('css', '.ui-dialog-content');
++
++    $file_storage = $this->container->get('entity_type.manager')->getStorage('file');
++    /** @var \Drupal\Core\File\FileSystemInterface $file_system */
++    $file_system = $this->container->get('file_system');
++
++    // Add to the twin media field.
++    // Add to the twin media field.
++    $this->openMediaLibraryForField('field_twin_media');
++
++    // Assert the upload form is now visible for default tab type_three.
++    $assert_session->elementExists('css', '.js-media-library-add-form');
++    $assert_session->fieldExists('Add files');
++
++    // Assert we can upload a file to the default tab type_three.
++    $assert_session->elementNotExists('css', '.js-media-library-add-form[data-input]');
++    $this->addMediaFileToField('Add files', $this->container->get('file_system')->realpath($png_image->uri));
++    $this->assertMediaAdded();
++    $assert_session->elementExists('css', '.js-media-library-add-form[data-input]');
++    // We do not have pre-selected items, so the container should not be added
++    // to the form.
++    $assert_session->pageTextNotContains('Additional selected media');
++    // Files are temporary until the form is saved.
++    $files = $file_storage->loadMultiple();
++    $file = array_pop($files);
++    $this->assertSame('public://type-three-dir', $file_system->dirname($file->getFileUri()));
++    $this->assertTrue($file->isTemporary());
++    // Assert the revision_log_message field is not shown.
++    $upload_form = $assert_session->elementExists('css', '.js-media-library-add-form');
++    $assert_session->fieldNotExists('Revision log message', $upload_form);
++    // Assert the name field contains the filename and the alt text is required.
++    $assert_session->fieldValueEquals('Name', $png_image->filename);
++    $page->fillField('Alternative text', $this->randomString());
++    $buttons = $this->assertElementExistsAfterWait('css', '.media-library-widget-modal .ui-dialog-buttonpane');
++
++    $buttons->pressButton('Save');
++    $this->waitForText('Insert selected');
++    $buttons->pressButton('Insert selected');
++    $assert_session->waitForElementVisible('css', '#field_twin_media-media-library-wrapper .js-media-library-selection .js-media-library-item');
++
++  }
++
+ }

@@ -1,0 +1,129 @@
+From 351ac84830035e9c4efde2ee645c9f836552fdca Mon Sep 17 00:00:00 2001
+From: Rajab Natshah <33889-RajabNatshah@users.noreply.drupalcode.org>
+Date: Mon, 8 Jul 2024 09:40:22 +0000
+Subject: [PATCH] Issue #3459881: Fix TypeError: implode(): Argument #1
+ ($array) must be of type array, string given in implode() (line 537 of
+ core/lib/Drupal/Core/Field/WidgetBase.php)
+
+---
+ core/lib/Drupal/Core/Field/WidgetBase.php | 96 ++++++++++++-----------
+ 1 file changed, 49 insertions(+), 47 deletions(-)
+
+diff --git a/core/lib/Drupal/Core/Field/WidgetBase.php b/core/lib/Drupal/Core/Field/WidgetBase.php
+index 6fdd8088099f..5f51966f2080 100644
+--- a/core/lib/Drupal/Core/Field/WidgetBase.php
++++ b/core/lib/Drupal/Core/Field/WidgetBase.php
+@@ -534,61 +534,63 @@ public function flagErrors(FieldItemListInterface $items, ConstraintViolationLis
+       // already been reported for the field.
+       // @todo Field validation should not be run on fields with FAPI errors to
+       //   begin with. See https://www.drupal.org/node/2070429.
+-      $element_path = implode('][', $element['#parents']);
+-      if ($reported_errors = $form_state->getErrors()) {
+-        foreach (array_keys($reported_errors) as $error_path) {
+-          if (str_starts_with($error_path, $element_path)) {
+-            return;
++      if (isset($element['#parents']) && is_array($element['#parents'])) {
++        $element_path = implode('][', $element['#parents']);
++        if ($reported_errors = $form_state->getErrors()) {
++          foreach (array_keys($reported_errors) as $error_path) {
++            if (str_starts_with($error_path, $element_path)) {
++              return;
++            }
+           }
+         }
+-      }
+ 
+-      // Only set errors if the element is visible.
+-      if (Element::isVisibleElement($element)) {
+-        $handles_multiple = $this->handlesMultipleValues();
+-
+-        $violations_by_delta = $item_list_violations = [];
+-        foreach ($violations as $violation) {
+-          $violation = new InternalViolation($violation);
+-          // Separate violations by delta.
+-          $property_path = explode('.', $violation->getPropertyPath());
+-          $delta = array_shift($property_path);
+-          if (is_numeric($delta)) {
+-            $violations_by_delta[$delta][] = $violation;
+-          }
+-          // Violations at the ItemList level are not associated to any delta.
+-          else {
+-            $item_list_violations[] = $violation;
++        // Only set errors if the element is visible.
++        if (Element::isVisibleElement($element)) {
++          $handles_multiple = $this->handlesMultipleValues();
++
++          $violations_by_delta = $item_list_violations = [];
++          foreach ($violations as $violation) {
++            $violation = new InternalViolation($violation);
++            // Separate violations by delta.
++            $property_path = explode('.', $violation->getPropertyPath());
++            $delta = array_shift($property_path);
++            if (is_numeric($delta)) {
++              $violations_by_delta[$delta][] = $violation;
++            }
++            // Violations at the ItemList level are not associated to any delta.
++            else {
++              $item_list_violations[] = $violation;
++            }
++            // @todo Remove BC layer https://www.drupal.org/i/3307859 on PHP 8.2.
++            $violation->arrayPropertyPath = $property_path;
+           }
+-          // @todo Remove BC layer https://www.drupal.org/i/3307859 on PHP 8.2.
+-          $violation->arrayPropertyPath = $property_path;
+-        }
+ 
+-        /** @var \Symfony\Component\Validator\ConstraintViolationInterface[] $delta_violations */
+-        foreach ($violations_by_delta as $delta => $delta_violations) {
+-          // Pass violations to the main element if this is a multiple-value
+-          // widget.
+-          if ($handles_multiple) {
+-            $delta_element = $element;
+-          }
+-          // Otherwise, pass errors by delta to the corresponding sub-element.
+-          else {
+-            $original_delta = $field_state['original_deltas'][$delta];
+-            $delta_element = $element[$original_delta];
+-          }
+-          foreach ($delta_violations as $violation) {
+-            $error_element = $this->errorElement($delta_element, $violation, $form, $form_state);
+-            if ($error_element !== FALSE) {
+-              $form_state->setError($error_element, $violation->getMessage());
++          /** @var \Symfony\Component\Validator\ConstraintViolationInterface[] $delta_violations */
++          foreach ($violations_by_delta as $delta => $delta_violations) {
++            // Pass violations to the main element if this is a multiple-value
++            // widget.
++            if ($handles_multiple) {
++              $delta_element = $element;
++            }
++            // Otherwise, pass errors by delta to the corresponding sub-element.
++            else {
++              $original_delta = $field_state['original_deltas'][$delta];
++              $delta_element = $element[$original_delta];
++            }
++            foreach ($delta_violations as $violation) {
++              $error_element = $this->errorElement($delta_element, $violation, $form, $form_state);
++              if ($error_element !== FALSE) {
++                $form_state->setError($error_element, $violation->getMessage());
++              }
+             }
+           }
+-        }
+ 
+-        /** @var \Symfony\Component\Validator\ConstraintViolationInterface[] $item_list_violations */
+-        // Pass violations to the main element without going through
+-        // errorElement() if the violations are at the ItemList level.
+-        foreach ($item_list_violations as $violation) {
+-          $form_state->setError($element, $violation->getMessage());
++          /** @var \Symfony\Component\Validator\ConstraintViolationInterface[] $item_list_violations */
++          // Pass violations to the main element without going through
++          // errorElement() if the violations are at the ItemList level.
++          foreach ($item_list_violations as $violation) {
++            $form_state->setError($element, $violation->getMessage());
++          }
+         }
+       }
+     }
+-- 
+GitLab
+

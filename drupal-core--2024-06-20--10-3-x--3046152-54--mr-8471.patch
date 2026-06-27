@@ -1,0 +1,98 @@
+diff --git a/core/misc/cspell/dictionary.txt b/core/misc/cspell/dictionary.txt
+index 5eda566e2f8a66628f57bbfdb448e08ccec16a46..be723704e053e3e15419286d6e44e205d65625a2 100644
+--- a/core/misc/cspell/dictionary.txt
++++ b/core/misc/cspell/dictionary.txt
+@@ -504,6 +504,7 @@ pingback
+ pjpeg
+ placeholdered
+ placeholdering
++playsinline
+ plusthick
+ porterstemmer
+ postcondition
+diff --git a/core/modules/file/config/schema/file.schema.yml b/core/modules/file/config/schema/file.schema.yml
+index d8b098d50fc2b990a26701f7412f41bd152d0421..fe5e7ac70438b59b37efefcc15ff6cd3caf6a878 100644
+--- a/core/modules/file/config/schema/file.schema.yml
++++ b/core/modules/file/config/schema/file.schema.yml
+@@ -118,6 +118,9 @@ file.formatter.media:
+           - tags
+           # Multiple file display: One HTML tag with multiple sources
+           - sources
++    playsinline:
++      type: boolean
++      label: 'Plays inline'
+ 
+ field.formatter.settings.file_audio:
+   type: file.formatter.media
+@@ -132,6 +135,9 @@ field.formatter.settings.file_video:
+     muted:
+       type: boolean
+       label: 'Muted'
++    playsinline:
++      type: boolean
++      label: 'Plays inline'
+     width:
+       type: integer
+       label: 'Width'
+diff --git a/core/modules/file/src/Plugin/Field/FieldFormatter/FileVideoFormatter.php b/core/modules/file/src/Plugin/Field/FieldFormatter/FileVideoFormatter.php
+index 41966203a374447cbd63e34767053f42fbe071b3..93689cdaa6aa205c6b97ce8e0fa9f7861db2976e 100644
+--- a/core/modules/file/src/Plugin/Field/FieldFormatter/FileVideoFormatter.php
++++ b/core/modules/file/src/Plugin/Field/FieldFormatter/FileVideoFormatter.php
+@@ -32,6 +32,7 @@ public static function getMediaType() {
+   public static function defaultSettings() {
+     return [
+       'muted' => FALSE,
++      'playsinline' => FALSE,
+       'width' => 640,
+       'height' => 480,
+     ] + parent::defaultSettings();
+@@ -47,6 +48,11 @@ public function settingsForm(array $form, FormStateInterface $form_state) {
+         '#type' => 'checkbox',
+         '#default_value' => $this->getSetting('muted'),
+       ],
++      'playsinline' => [
++        '#title' => $this->t('Plays Inline'),
++        '#type' => 'checkbox',
++        '#default_value' => $this->getSetting('playsinline'),
++      ],
+       'width' => [
+         '#type' => 'number',
+         '#title' => $this->t('Width'),
+@@ -76,6 +82,7 @@ public function settingsForm(array $form, FormStateInterface $form_state) {
+   public function settingsSummary() {
+     $summary = parent::settingsSummary();
+     $summary[] = $this->t('Muted: %muted', ['%muted' => $this->getSetting('muted') ? $this->t('yes') : $this->t('no')]);
++    $summary[] = $this->t('Plays Inline: %playsinline', ['%playsinline' => $this->getSetting('playsinline') ? $this->t('yes') : $this->t('no')]);
+ 
+     if ($width = $this->getSetting('width')) {
+       $summary[] = $this->t('Width: %width pixels', [
+@@ -97,6 +104,9 @@ public function settingsSummary() {
+    */
+   protected function prepareAttributes(array $additional_attributes = []) {
+     $attributes = parent::prepareAttributes(['muted']);
++    if (($playsinline = $this->getSetting('playsinline'))) {
++      $attributes->setAttribute('playsinline', $playsinline);
++    }
+     if (($width = $this->getSetting('width'))) {
+       $attributes->setAttribute('width', $width);
+     }
+diff --git a/core/modules/file/tests/src/Functional/Formatter/FileVideoFormatterTest.php b/core/modules/file/tests/src/Functional/Formatter/FileVideoFormatterTest.php
+index 651fefdff9c9166cea7627ca06e1147d15be74a2..d25eedfc0a858686e905bea3563aafe59a1149fd 100644
+--- a/core/modules/file/tests/src/Functional/Formatter/FileVideoFormatterTest.php
++++ b/core/modules/file/tests/src/Functional/Formatter/FileVideoFormatterTest.php
+@@ -73,6 +73,7 @@ public function testAttributes(): void {
+         'autoplay' => TRUE,
+         'loop' => TRUE,
+         'muted' => TRUE,
++        'playsinline' => TRUE,
+         'width' => 800,
+         'height' => 600,
+       ]
+@@ -102,6 +103,7 @@ public function testAttributes(): void {
+     $assert_session->elementExists('css', "video[autoplay='autoplay'] > source[src='$file_url'][type='video/mp4']");
+     $assert_session->elementExists('css', "video[loop='loop'] > source[src='$file_url'][type='video/mp4']");
+     $assert_session->elementExists('css', "video[muted='muted'] > source[src='$file_url'][type='video/mp4']");
++    $assert_session->elementExists('css', "video[playsinline='playsinline'] > source[src='$file_url'][type='video/mp4']");
+     $assert_session->elementExists('css', "video[width='800'] > source[src='$file_url'][type='video/mp4']");
+     $assert_session->elementExists('css', "video[height='600'] > source[src='$file_url'][type='video/mp4']");
+ 
