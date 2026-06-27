@@ -21,10 +21,5 @@
   ],
   "require": {
     "cweagans/composer-patches": "~1.7.0 || ~2.0"
-  },
-  "extra": {
-    "branch-alias": {
-      "dev-patches": "dev-patches"
-    }
   }
 }
