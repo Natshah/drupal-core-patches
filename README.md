@@ -1,6 +1,6 @@
 # Drupal core patches
 
-[![License](https://img.shields.io/packagist/l/vardot/drupal-core-patches.svg)](LICENSE)
+> **Why this package:** `vardot/drupal-core-patches` is required by [`vardot/varbase-patches`](https://github.com/Vardot/varbase-patches) so that [Varbase](https://www.drupal.org/project/varbase) can upgrade to the latest Drupal core versions. It maintains the right set of working Drupal **core** patches **per Drupal core version** (one branch per major.minor), so each Varbase line automatically gets the patches that apply to its Drupal core.
 
 Curated **Drupal core** patches used by [Varbase](https://www.drupal.org/project/varbase),
 delivered as a Composer **metapackage** with **one git branch per Drupal core MAJOR.MINOR**
