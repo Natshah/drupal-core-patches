@@ -1,0 +1,24 @@
+diff --git a/core/lib/Drupal/Component/Utility/Html.php b/core/lib/Drupal/Component/Utility/Html.php
+index 193f01b21f..f55091522b 100644
+--- a/core/lib/Drupal/Component/Utility/Html.php
++++ b/core/lib/Drupal/Component/Utility/Html.php
+@@ -417,7 +417,7 @@ public static function decodeEntities(string $text): string {
+    * '#markup' is not recommended. Use the '#plain_text' key instead and the
+    * renderer will autoescape the text.
+    *
+-   * @param string $text
++   * @param string|null $text
+    *   The input text.
+    *
+    * @return string
+@@ -428,8 +428,8 @@ public static function decodeEntities(string $text): string {
+    *
+    * @ingroup sanitization
+    */
+-  public static function escape(string $text): string {
+-    return htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
++  public static function escape(string|NULL $text): string {
++    return htmlspecialchars($text ?? '', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+   }
+ 
+   /**

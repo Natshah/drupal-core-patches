@@ -1,0 +1,15 @@
+diff --git a/core/modules/settings_tray/src/Block/BlockEntitySettingTrayForm.php b/core/modules/settings_tray/src/Block/BlockEntitySettingTrayForm.php
+index 243e907ccd3ffe0663c96235dfb4cab42cb9b25b..59579f334089a59713dcd2905de0137acb7eb9b9 100644
+--- a/core/modules/settings_tray/src/Block/BlockEntitySettingTrayForm.php
++++ b/core/modules/settings_tray/src/Block/BlockEntitySettingTrayForm.php
+@@ -168,7 +168,9 @@ protected function getRedirectUrl() {
+     // because it will use <current> if 'destination' is not in the query
+     // string.
+     if ($this->getRequest()->query->has('destination') && $destination = $this->getRedirectDestination()->get()) {
+-      return Url::fromUserInput('/' . $destination);
++      // Normalize the destination to ensure it has a single leading slash.
++      $destination = (strpos($destination, '/') === 0) ? $destination : '/' . $destination;
++      return Url::fromUserInput($destination);
+     }
+   }
+ 

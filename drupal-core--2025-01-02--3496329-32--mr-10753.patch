@@ -1,0 +1,88 @@
+diff --git a/core/modules/big_pipe/big_pipe.libraries.yml b/core/modules/big_pipe/big_pipe.libraries.yml
+index 36d5f8e4dccc8f17d6f72a31194e9a40b38e9f82..aa989fc7c8dd04dc6d4ea66eac6dc4abb5f93d2c 100644
+--- a/core/modules/big_pipe/big_pipe.libraries.yml
++++ b/core/modules/big_pipe/big_pipe.libraries.yml
+@@ -1,5 +1,6 @@
+ big_pipe:
+   version: VERSION
++  header: true
+   js:
+     js/big_pipe.js: {}
+   drupalSettings:
+diff --git a/core/modules/big_pipe/js/big_pipe.js b/core/modules/big_pipe/js/big_pipe.js
+index 3c3e106e70373886175161fca11d3dbbbf739e12..8ab66dd661afb7b905d73e4417a54290eedd2ca2 100644
+--- a/core/modules/big_pipe/js/big_pipe.js
++++ b/core/modules/big_pipe/js/big_pipe.js
+@@ -149,25 +149,47 @@
+ 
+   const observer = new MutationObserver(processMutations);
+ 
+-  // Attach behaviors early, if possible.
+-  Drupal.attachBehaviors(document);
+-
+-  // If loaded asynchronously there might already be replacement elements
+-  // in the DOM before the mutation observer is started.
+-  document.querySelectorAll(replacementsSelector).forEach(processReplacement);
+-
+-  // Start observing the body element for new children and for new changes in
+-  // Text nodes of elements. We need to track Text nodes because content
+-  // of the node can be too large, browser will receive not fully loaded chunk
+-  // and render it as is. At this moment json inside script will be invalid and
+-  // we need to track new changes to that json (Text node), once it will be
+-  // fully loaded it will be processed.
+-  // @ingroup large_chunk
+-  observer.observe(document.body, {
+-    childList: true,
+-    // Without this options characterData will not be triggered inside child nodes.
+-    subtree: true,
+-    characterData: true,
++  /**
++   * Calls callback when document ready.
++   *
++   * @param {function} callback
++   *   The function to be called on document ready.
++   */
++  const domReady = (callback) => {
++    const listener = () => {
++      callback();
++      document.removeEventListener('DOMContentLoaded', listener);
++    };
++    if (document.readyState !== 'loading') {
++      setTimeout(callback, 0);
++    } else {
++      document.addEventListener('DOMContentLoaded', listener);
++    }
++  };
++
++  
++  domReady(() => {
++
++    // Attach behaviors early, if possible.
++    Drupal.attachBehaviors(document, drupalSettings);
++
++    // If loaded asynchronously there might already be replacement elements
++    // in the DOM before the mutation observer is started.
++    document.querySelectorAll(replacementsSelector).forEach(processReplacement);
++
++    // Start observing the body element for new children and for new changes in
++    // Text nodes of elements. We need to track Text nodes because content
++    // of the node can be too large, browser will receive not fully loaded chunk
++    // and render it as is. At this moment json inside script will be invalid and
++    // we need to track new changes to that json (Text node), once it will be
++    // fully loaded it will be processed.
++    // @ingroup large_chunk
++    observer.observe(document.body, {
++      childList: true,
++      // Without this options characterData will not be triggered inside child nodes.
++      subtree: true,
++      characterData: true,
++    });
+   });
+ 
+   // As soon as the document is loaded, no more replacements will be added.
+@@ -181,4 +203,4 @@
+     // No more mutations will be processed, remove the leftover Ajax object.
+     Drupal.ajax.instances[ajaxObject.instanceIndex] = null;
+   });
+-})(Drupal, drupalSettings);
++})(Drupal, window.drupalSettings);
