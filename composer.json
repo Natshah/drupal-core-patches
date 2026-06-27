@@ -23,13 +23,16 @@
         "source": "https://github.com/Vardot/drupal-core-patches"
     },
     "require": {
-        "drupal/core": "~11.3.0",
         "cweagans/composer-patches": "~1 || ~2"
+    },
+    "conflict": {
+        "drupal/core": "<11.3.0 || >=11.4.0"
     },
     "extra": {
         "branch-alias": {
             "dev-11.3.x": "11.3.x-dev"
         },
+        "enable-patching": true,
         "patches": {
             "drupal/core": {
                 "Issue #2893892: Fixed Warning Invalid argument supplied for foreach() in Drupal": "https://www.drupal.org/files/issues/2018-12-10/core--getDerivatives-Invalid-argument-foreach--2893892-11-d8.patch",
