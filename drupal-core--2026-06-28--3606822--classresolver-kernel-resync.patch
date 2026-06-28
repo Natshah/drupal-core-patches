@@ -1,0 +1,15 @@
+--- a/core/lib/Drupal/Core/DependencyInjection/ClassResolver.php
++++ b/core/lib/Drupal/Core/DependencyInjection/ClassResolver.php
+@@ -25,6 +25,12 @@
+    */
+   public function getInstanceFromDefinition($definition) {
+     if ($this->container->has($definition)) {
++      // #3606822: a stale ContainerBuilder during install can miss the synthetic
++      // kernel; re-sync from the live kernel so OOP-hook autowiring resolves.
++      if ($this->container instanceof \Symfony\Component\DependencyInjection\ContainerBuilder
++          && !$this->container->initialized('kernel') && \Drupal::hasContainer()) {
++        $this->container->set('kernel', \Drupal::service('kernel'));
++      }
+       $instance = $this->container->get($definition);
+     }
+     else {
