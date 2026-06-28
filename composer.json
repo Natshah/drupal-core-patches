@@ -20,14 +20,12 @@
     }
   ],
   "require": {
-    "drupal/core": "~12.0.0",
-    "cweagans/composer-patches": "~1.7.0 || ~2.0"
+    "drupal/core": "~12.0.0"
   },
   "extra": {
     "branch-alias": {
       "dev-12.0.x": "12.0.x-dev"
     },
-    "enable-patching": true,
     "patches": {
       "drupal/core": {}
     }
