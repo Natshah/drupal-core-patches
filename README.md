@@ -1,8 +1,5 @@
 # Drupal core patches
 
-> **Note:** the `11.4.x` branch is a forward-compatibility placeholder for Drupal core ~11.4.0. It carries no Drupal core patches yet — add re-rolled patches here when that core line needs them (see docs/adding-a-core-version.md).
-
-
 > **Why this package:** `vardot/drupal-core-patches` is required by [`vardot/varbase-patches`](https://github.com/Vardot/varbase-patches) so that [Varbase](https://www.drupal.org/project/varbase) can upgrade to the latest Drupal core versions. It maintains the right set of working Drupal **core** patches **per Drupal core version** (one branch per major.minor), so each Varbase line automatically gets the patches that apply to its Drupal core.
 
 Curated **Drupal core** patches used by [Varbase](https://www.drupal.org/project/varbase),
