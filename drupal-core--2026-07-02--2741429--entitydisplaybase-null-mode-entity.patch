@@ -1,0 +1,19 @@
+diff --git a/core/lib/Drupal/Core/Entity/EntityDisplayBase.php b/core/lib/Drupal/Core/Entity/EntityDisplayBase.php
+index 8b6f1a2c9d1..3e6b2a5f8c7 100644
+--- a/core/lib/Drupal/Core/Entity/EntityDisplayBase.php
++++ b/core/lib/Drupal/Core/Entity/EntityDisplayBase.php
+@@ -306,5 +306,13 @@ public function calculateDependencies() {
+     // Depend on configured modes.
+     if ($this->mode != 'default') {
+       $mode_entity = $this->entityTypeManager()->getStorage('entity_' . $this->displayContext . '_mode')->load($target_entity_type->id() . '.' . $this->mode);
+-      $this->addDependency('config', $mode_entity->getConfigDependencyName());
++      // https://www.drupal.org/project/drupal/issues/2741429: the mode
++      // entity can legitimately be missing (e.g. a recipe config action
++      // clones a display into a view/form mode whose
++      // core.entity_view_mode/core.entity_form_mode config was skipped
++      // during a non-strict config import). Guard against the null case
++      // instead of fataling in calculateDependencies().
++      if ($mode_entity) {
++        $this->addDependency('config', $mode_entity->getConfigDependencyName());
++      }
+     }
