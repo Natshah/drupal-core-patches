@@ -1,0 +1,19 @@
+diff --git a/core/modules/contextual/src/ContextualLinksSerializer.php b/core/modules/contextual/src/ContextualLinksSerializer.php
+index 18d86843da3..497b5feedf5 100644
+--- a/core/modules/contextual/src/ContextualLinksSerializer.php
++++ b/core/modules/contextual/src/ContextualLinksSerializer.php
+@@ -43,7 +43,13 @@ public function linksToId(array $contextualLinks): string {
+ 
+     $langcode = $this->languageManager->getCurrentLanguage(LanguageInterface::TYPE_URL)->getId();
+     foreach ($contextualLinks as $group => $args) {
+-      $routeParameters = UrlHelper::buildQuery($args['route_parameters']);
++      // Some contextual links (e.g. from multilingual layout edit contexts)
++      // can have a NULL 'route_parameters' value instead of an array, which
++      // would otherwise cause a TypeError in UrlHelper::buildQuery().
++      // @see https://www.drupal.org/project/drupal/issues/3101231
++      $routeParameters = (isset($args['route_parameters']) && is_array($args['route_parameters']))
++        ? UrlHelper::buildQuery($args['route_parameters'])
++        : UrlHelper::buildQuery([]);
+       $args += ['metadata' => []];
+       // Add the current URL language to metadata so a different ID will be
+       // computed when URLs vary by language. This allows to store different
