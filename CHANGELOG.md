@@ -4,6 +4,10 @@ All notable changes on the `11.4.x` branch of [`Vardot/drupal-core-patches`](htt
 Each release lists the commits — merged pull requests and the drupal.org issues they reference — since the previous release.
 `#N` links to the pull request; 7-digit `#NNNNNNN` refs are drupal.org issues. Generated from git history.
 
+## [Unreleased]
+
+- ci: Drop the composer-patches v1 (`~1.7.0`) leg from the patches-apply test matrix -- test with composer-patches `~2.0` only
+
 ## [11.4.0.4] - 2026-07-06
 
 - task: Add a patch for Drupal Core on Issue #2701575: RequestContext throws error when current request is empty (#19)
