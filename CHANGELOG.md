@@ -4,6 +4,10 @@ All notable changes on the `10.6.x` branch of [`Vardot/drupal-core-patches`](htt
 Each release lists the commits — merged pull requests and the drupal.org issues they reference — since the previous release.
 `#N` links to the pull request; 7-digit `#NNNNNNN` refs are drupal.org issues. Generated from git history.
 
+## [Unreleased]
+
+- ci: Drop the composer-patches v1 (`~1.7.0`) leg from the patches-apply test matrix -- test with composer-patches `~2.0` only
+
 ## [10.6.0.4] - 2026-07-06
 
 - docs: Add `CHANGELOG.md` for the `10.6.x` branch (#6)
