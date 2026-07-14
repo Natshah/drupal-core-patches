@@ -6,6 +6,7 @@ Each release lists the commits — merged pull requests and the drupal.org issue
 
 ## [Unreleased]
 
+- ci: Drop the composer-patches v1 (`~1.7.0`) leg from the patches-apply test matrix -- test with composer-patches `~2.0` only
 - ci: Add a GitHub Actions patches test — installs the Drupal core this branch targets and checks that Composer Patches (v1 and v2) applies every core patch, and that every patch file still exists
 
 - docs: lock the patch issue/PR title standard in the agent docs (#29)
