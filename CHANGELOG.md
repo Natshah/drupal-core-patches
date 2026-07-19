@@ -6,6 +6,7 @@ Each release lists the commits — merged pull requests and the drupal.org issue
 
 ## [Unreleased]
 
+- task: Add a patch for Drupal Core on Issue #3606822: Synthetic kernel service error on CLI site:install with theme OOP hooks -- for Varbase 11.4.x -- additional fallback hunk for the `ClassResolver::getInstanceFromDefinition()` else branch (stale-resolver-container fallback to the live container)
 - ci: Fix the "Upload the install log" artifact name on PR runs -- `github.ref_name` resolves to `<PR>/merge` on a pull_request run, and the `/` made `actions/upload-artifact@v4` reject the name and fail the job `if: always()` even when every patch applied cleanly (that is what made #58-#61 report red). PR runs now use `pr-<number>`; branch pushes keep the readable `<branch>` name
 
 ## [11.4.0.4] - 2026-07-06
